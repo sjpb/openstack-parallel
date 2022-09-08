@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+# openstack-parallel <args ...> <pattern>
+
+import sys, json, subprocess, pprint
+
+if __name__ == '__main__':
+    object = sys.argv[1]
+    pattern = sys.argv[-1]
+    print('object=%s pattern=%s' % (object, pattern))
+    
+    p = subprocess.run("openstack %s list -f json" % object, shell=True, capture_output=True, text=True)
+    objects = json.loads(p.stdout)
+    filtered_objects = [ob for ob in objects if pattern in ob['Name']]
+    print('Found %s objects: %s' % (len(filtered_objects), ','.join([ob['Name'] for ob in filtered_objects])))
+    
+    base_cmd = ['openstack'] + sys.argv[1:-1]
+    go = input('Running "%s" on %s objects, proceed? (y/n):' % (' '.join(base_cmd + ['<object>']), len(filtered_objects)))
+    if go == "y":
+        for ob in filtered_objects:
+            cmd = base_cmd + [ob['ID']]
+            print(ob['Name'] + ':')
+            p = subprocess.run(' ' .join(cmd), shell=True, capture_output=True, text=True)
+            print(p.stdout)
