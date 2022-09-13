@@ -3,7 +3,7 @@
 # e.g.
 #   openstack-parallel server,port delete test-cluster
 
-import sys, json, subprocess, pprint
+import sys, json, subprocess, pprint, re
 
 if __name__ == '__main__':
     input_object = sys.argv[1]
@@ -18,8 +18,10 @@ if __name__ == '__main__':
     cmds = []
     for cmd_object in cmd_objects:
         p = subprocess.run("openstack %s list -f json" % cmd_object, shell=True, capture_output=True, text=True)
+        if p.returncode:
+            exit(p.stderr)
         objects = json.loads(p.stdout)
-        filtered_objects = [ob for ob in objects if pattern in ob['Name']]
+        filtered_objects = [ob for ob in objects if re.search(pattern, ob['Name'])]
         for ob in filtered_objects:
             cmd = ['openstack', cmd_object] + sys.argv[2:-1] + [ob['Name']]
             cmds.append(' '.join(cmd))

@@ -15,11 +15,13 @@ pip install python-openstackclient
 
 # Usage
 
-After activating venv use it in place of `openstack`, but pass a string to find in the object name instead of an actual object name as the last argument, e.g.:
+After activating venv use it in place of `openstack`, but pass:
+- a comma-separated list of objects to operate on as the 2nd argument
+- a Python regex for the object name(s) as the last argument
+
+e.g.:
 ```
-./openstack-parallel server delete ci3006665556
+./openstack-parallel server,port delete ^ci
 ```
 
-Will find all servers with names containing `ci3006665556`, display their names and prompt before deleting them.
-
-Note the pattern to match is just a substring, not a regular expression.
+Will find all servers and ports with names starting with `ci`, display their names and prompt before deleting them.
