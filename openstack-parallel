@@ -19,7 +19,7 @@ if __name__ == '__main__':
     for cmd_object in cmd_objects:
         p = subprocess.run("openstack %s list -f json" % cmd_object, shell=True, capture_output=True, text=True)
         if p.returncode:
-            exit(p.stderr)
+            exit(p.stderr + p.stdout)
         objects = json.loads(p.stdout)
         filtered_objects = [ob for ob in objects if re.search(pattern, ob['Name'])]
         for ob in filtered_objects:
@@ -36,4 +36,6 @@ if __name__ == '__main__':
         for cmd in cmds:
             print(cmd + ':')
             p = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            if p.returncode:
+                exit(p.stderr + p.stdout)
             print(p.stdout)
