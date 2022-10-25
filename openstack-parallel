@@ -1,13 +1,21 @@
 #!/usr/bin/env python
 #   openstack-parallel OBJECT[,OBJECT ...] ARGS ... PATTERN
+#   openstack-parallel OBJECT[,OBJECT ...] ARGS ... PATTERN -- ARGS ...
+# i.e. the argument before -- or the last argument is taken as a pattern to find for object(s)
 # e.g.
 #   openstack-parallel server,port delete test-cluster
+#   openstack-parallel server add security group test-cluster -- ssh
 
 import sys, json, subprocess, pprint, re
 
 if __name__ == '__main__':
     input_object = sys.argv[1]
-    pattern = sys.argv[-1]
+    try:
+        dash_pos = sys.argv.index('--')
+    except ValueError:
+        dash_pos = 0
+    pattern_pos = dash_pos - 1
+    pattern = sys.argv[pattern_pos]
     print('object=%s pattern=%s' % (input_object, pattern))
 
     if ',' in input_object:
@@ -23,7 +31,10 @@ if __name__ == '__main__':
         objects = json.loads(p.stdout)
         filtered_objects = [ob for ob in objects if re.search(pattern, ob['Name'])]
         for ob in filtered_objects:
-            cmd = ['openstack', cmd_object] + sys.argv[2:-1] + [ob['Name']]
+            cmd = ['openstack', cmd_object] + sys.argv[2:]
+            cmd[pattern_pos] = ob['Name']
+            if dash_pos:
+                del cmd[dash_pos]
             cmds.append(' '.join(cmd))
     if len(cmds) == 0:
         sys.exit("No %s matching '%s' found." % (input_object, pattern))
