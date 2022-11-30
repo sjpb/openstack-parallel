@@ -5,8 +5,12 @@
 # e.g.
 #   openstack-parallel server,port delete test-cluster
 #   openstack-parallel server add security group test-cluster -- ssh
+#
+# If more than one OBJECT is given and "show" is not found in ARGS then each call to openstack blocks.
+# This allows coping with dependencies - specify OBJECTs in the order in which they should be modified.
+# Otherwise calls to openstack will not block for speed.
 
-import sys, json, subprocess, pprint, re
+import sys, json, subprocess, pprint, re, select
 
 if __name__ == '__main__':
     input_object = sys.argv[1]
@@ -35,18 +39,42 @@ if __name__ == '__main__':
             cmd[pattern_pos] = ob['Name']
             if dash_pos:
                 del cmd[dash_pos]
-            cmds.append(' '.join(cmd))
+            cmds.append(cmd)
     if len(cmds) == 0:
         sys.exit("No %s matching '%s' found." % (input_object, pattern))
+
+    if 'show' not in sys.argv[1:]:
+        print('Running %s:' % ('sequentially' if len(cmd_objects) > 1 else 'in parallel'))
+        for cmd in cmds:
+            print(' '.join(cmd))
+        go = input('Proceed? (y/n):')
     else:
-        print('Running:')
-        for cmd in cmds:
-            print(cmd)
-    go = input('Proceed? (y/n):')
-    if go == "y":
-        for cmd in cmds:
-            print(cmd + ':')
-            p = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        go = 'y'
+
+    if go != 'y':
+        sys.exit()
+
+    processes = []
+    for cmd in cmds:
+        proc = subprocess.Popen(cmd, 
+            # shell=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                bufsize=1, text=True)
+        processes.append(proc)
+        if len(cmd_objects) > 1: # assume theres some dependencies and run ALL commands blocking
+            proc.wait()
+    
+    # wait for all to finish:
+    returncodes = [p.wait() for p in processes]
+    
+    # show outputs:
+    for p in processes:
+        (stdout_data, stderr_data) = p.communicate()
+        stdout_data = stdout_data.strip()
+        if not p.returncode and not stderr_data and len(stdout_data.split('\n')) == 1: # enter single-line mode
+            print(p.args[1], p.args[pattern_pos], stdout_data)
+        else:
+            print(' '.join(p.args) + ":")
+            print(stdout_data)
             if p.returncode:
-                exit(p.stderr + p.stdout)
-            print(p.stdout)
+                print(stderr_data)
