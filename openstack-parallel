@@ -36,9 +36,11 @@ if __name__ == '__main__':
         filtered_objects = [ob for ob in objects if re.search(pattern, ob['Name'])]
         for ob in filtered_objects:
             cmd = ['openstack', cmd_object] + sys.argv[2:]
+            #cmd[pattern_pos] = ob['ID']
             cmd[pattern_pos] = ob['Name']
             if dash_pos:
                 del cmd[dash_pos]
+            # cmd.append('#%s' % ob['Name'])
             cmds.append(cmd)
     if len(cmds) == 0:
         sys.exit("No %s matching '%s' found." % (input_object, pattern))
